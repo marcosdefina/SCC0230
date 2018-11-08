@@ -2,6 +2,7 @@
 
 """Flappy Bird, implemented using Pygame."""
 
+import time #aaa
 import math
 import os
 from random import randint
@@ -44,9 +45,9 @@ class Bird(pygame.sprite.Sprite):
     """
 
     WIDTH = HEIGHT = 32
-    SINK_SPEED = 0.18
+    SINK_SPEED = 0.2
     CLIMB_SPEED = 0.3
-    CLIMB_DURATION = 333.3
+    CLIMB_DURATION = 200
 
     def __init__(self, x, y, msec_to_climb, images):
         """Initialise a new Bird instance.
@@ -157,8 +158,8 @@ class PipePair(pygame.sprite.Sprite):
     PIECE_HEIGHT = 32
     ADD_INTERVAL = 3000
 
-    def __init__(self, pipe_end_img, pipe_body_img):
-        """Initialises a new random PipePair.
+    def __init__(self, pipe_end_img, pipe_body_img, pipenum):
+        """Initialises a new PipePair.
 
         The new PipePair will automatically be assigned an x attribute of
         float(WIN_WIDTH - 1).
@@ -180,7 +181,7 @@ class PipePair(pygame.sprite.Sprite):
              3 * PipePair.PIECE_HEIGHT) /  # 2 end pieces + 1 body piece
             PipePair.PIECE_HEIGHT          # to get number of pipe pieces
         )
-        self.bottom_pieces = randint(1, total_pipe_body_pieces)
+        self.bottom_pieces = pipenum
         self.top_pieces = total_pipe_body_pieces - self.bottom_pieces
 
         # bottom pipe
@@ -324,21 +325,41 @@ def main():
     bird = Bird(50, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
                 (images['bird-wingup'], images['bird-wingdown']))
 
+    autoinput=ai()
     pipes = deque()
+    PS=(5, 4, 8, 3, 8, 7, 3, 2, 6, 5) #preset pipe size
+    end=0
+    done=1
+    firstcheck=1
+    while (end==0): # Make game restart with collision
+        if done:
+          done = paused = 0
+          bird = Bird(50, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
+            (images['bird-wingup'], images['bird-wingdown']))
+          pipes=deque() # Make pipes vanish
+          # Reset pipesize index to make them the same every time
+          pscount=0
+          frame_clock = 0  # this counter is only incremented if the game isn't paused
+          if firstcheck==0:
+            autoinput.resetvar(score, deathtype)
+          else:
+            firstcheck=0
+          score=0
 
-    frame_clock = 0  # this counter is only incremented if the game isn't paused
-    score = 0
-    done = paused = False
-    while not done:
         clock.tick(FPS)
 
         # Handle this 'manually'.  If we used pygame.time.set_timer(),
         # pipe addition would be messed up when paused.
         if not (paused or frame_clock % msec_to_frames(PipePair.ADD_INTERVAL)):
-            pp = PipePair(images['pipe-end'], images['pipe-body'])
+            pp = PipePair(images['pipe-end'], images['pipe-body'], PS[pscount])
+            pscount+=1
+            if pscount==10:
+              pscount=0
             pipes.append(pp)
 
         for e in pygame.event.get():
+            if e.type == KEYUP and e.key == K_ESCAPE: #Get game to quit only when key is pressed
+                end = True
             if e.type == QUIT or (e.type == KEYUP and e.key == K_ESCAPE):
                 done = True
                 break
@@ -355,6 +376,16 @@ def main():
         pipe_collision = any(p.collides_with(bird) for p in pipes)
         if pipe_collision or 0 >= bird.y or bird.y >= WIN_HEIGHT - Bird.HEIGHT:
             done = True
+            if pipe_collision:
+              if bird.rect[1]>(pipes[0].top_pieces-1)*pipes[0].PIECE_HEIGHT and bird.rect[1]<WIN_HEIGHT-(pipes[0].bottom_pieces-1)*pipes[0].PIECE_HEIGHT: # If collision is with pipe head
+                print("deathtype=0")
+                deathtype=0
+              else:
+                print("deathtype=1")
+                deathtype=1
+            else:
+              print("deathtype=2")
+              deathtype=2
 
         for x in (0, WIN_WIDTH / 2):
             display_surface.blit(images['background'], (x, 0))
@@ -373,6 +404,7 @@ def main():
         for p in pipes:
             if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
                 score += 1
+                autoinput.scorecount()
                 p.score_counted = True
 
         score_surface = score_font.render(str(score), True, (255, 255, 255))
@@ -381,8 +413,59 @@ def main():
 
         pygame.display.flip()
         frame_clock += 1
-    print('Game over! Score: %i' % score)
+        
+        # Machine learning call
+        fly=autoinput.play()
+        if fly==1:
+          bird.msec_to_climb=Bird.CLIMB_DURATION
+
+    print('Game over! Highest score: %i' % autoinput.best[0])
     pygame.quit()
+
+class ai:
+  def __init__(self):
+    # AI input variables - 0 is current, 1 is best, 5 is fifth best
+    self.curr=[0, 2, 0] # First index is score, second is type of death, third is index number until last score change, following are bird movements
+    self.best=[0, 2, 0] # Types of death are 2 for off screen, 1 for side of pipe, 0 for top or bottom or pipe
+    self.secbestframe=0
+    self.count=2
+
+  def resetvar(self, score, deathcircumstance):
+    self.curr[0]=score
+    self.curr[1]=deathcircumstance
+    # Compare curr with best, see which is better
+    if self.curr[0]>self.best[0]:
+      if self.best[2]>self.secbestframe:
+        self.secbestframe=self.best[2]
+      self.best=self.curr[:]
+    elif self.curr[0]==self.best[0]:
+      if self.curr[1]<self.best[1]:
+        if self.best[2]>self.secbestframe:
+          self.secbestframe=self.best[2]
+        self.best=self.curr[:]
+    self.curr=self.best[:]
+    self.count=2
+
+  def play(self):
+    if self.best == [0, 2, 0] or self.count>len(self.curr)-1:
+      self.curr.append(randint(0,25)) # Randomize and append
+    elif self.count>self.best[2]:
+      if self.best[1]==2:
+        self.curr[self.count]=(randint(0,25)) # Randomize and replace
+      if self.best[1]==1:
+        aux_count=self.best[2]-(WIN_WIDTH/2) # Move only if bird is halfway between pipes or later
+        if self.count>aux_count+self.best[2]:
+          self.curr[self.count]=(randint(0,25))
+      else:
+        aux_count=self.best[2]-(WIN_WIDTH/10) # Move only if bird is more than 4/5 of the way to next pipe
+        if self.count>aux_count+self.best[2]:
+          #print("AAA")
+          self.curr[self.count]=(randint(0,25)) # Possible to change chance later
+    self.count+=1
+    return self.curr[self.count-1]
+
+  def scorecount(self):
+    self.curr[2]=self.count
 
 
 if __name__ == '__main__':

@@ -457,7 +457,7 @@ class ai:
         if self.count>aux_count+self.best[2]:
           self.curr[self.count]=(randint(0,25))
       else:
-        aux_count=self.best[2]-(WIN_WIDTH/4) # Move only if bird is more than 4/5 of the way to next pipe
+        aux_count=self.best[2]-(WIN_WIDTH/3) # Move only if bird is more than 2/3 of the way to next pipe
         if self.count>aux_count+self.best[2]:
           #print("AAA")
           self.curr[self.count]=(randint(0,25)) # Possible to change chance later

@@ -377,7 +377,7 @@ def main():
         if pipe_collision or 0 >= bird.y or bird.y >= WIN_HEIGHT - Bird.HEIGHT:
             done = True
             if pipe_collision:
-              if bird.rect[1]>(pipes[0].top_pieces-1)*pipes[0].PIECE_HEIGHT and bird.rect[1]<WIN_HEIGHT-(pipes[0].bottom_pieces-1)*pipes[0].PIECE_HEIGHT: # If collision is with pipe head
+              if bird.rect[1]>(pipes[0].top_pieces-1)*pipes[0].PIECE_HEIGHT and bird.rect[1]<WIN_HEIGHT-(pipes[0].bottom_pieces+1)*pipes[0].PIECE_HEIGHT: # If collision is with pipe head
                 print("deathtype=0")
                 deathtype=0
               else:

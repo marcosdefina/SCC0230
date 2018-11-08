@@ -378,13 +378,10 @@ def main():
             done = True
             if pipe_collision:
               if bird.rect[1]>(pipes[0].top_pieces-1)*pipes[0].PIECE_HEIGHT and bird.rect[1]<WIN_HEIGHT-(pipes[0].bottom_pieces)*pipes[0].PIECE_HEIGHT: # If collision is with pipe head
-                print("deathtype=0")
                 deathtype=0
               else:
-                print("deathtype=1")
                 deathtype=1
             else:
-              print("deathtype=2")
               deathtype=2
 
         for x in (0, WIN_WIDTH / 2):
@@ -459,7 +456,6 @@ class ai:
       else:
         aux_count=self.best[2]-(WIN_WIDTH/3) # Move only if bird is more than 2/3 of the way to next pipe
         if self.count>aux_count:
-          #print("AAA")
           self.curr[self.count]=(randint(0,25)) # Possible to change chance later
     self.count+=1
     return self.curr[self.count-1]

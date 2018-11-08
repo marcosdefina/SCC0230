@@ -454,11 +454,11 @@ class ai:
         self.curr[self.count]=(randint(0,25)) # Randomize and replace
       if self.best[1]==1:
         aux_count=self.best[2]-(WIN_WIDTH/2) # Move only if bird is halfway between pipes or later
-        if self.count>aux_count+self.best[2]:
+        if self.count>aux_count:
           self.curr[self.count]=(randint(0,25))
       else:
         aux_count=self.best[2]-(WIN_WIDTH/3) # Move only if bird is more than 2/3 of the way to next pipe
-        if self.count>aux_count+self.best[2]:
+        if self.count>aux_count:
           #print("AAA")
           self.curr[self.count]=(randint(0,25)) # Possible to change chance later
     self.count+=1

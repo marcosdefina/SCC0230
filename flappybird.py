@@ -410,7 +410,7 @@ def main():
 
         pygame.display.flip()
         frame_clock += 1
-        
+
         # Machine learning call
         fly=autoinput.play()
         if fly==1:
@@ -424,38 +424,40 @@ class ai:
     # AI input variables - 0 is current, 1 is best, 5 is fifth best
     self.curr=[0, 2, 0] # First index is score, second is type of death, third is index number until last score change, following are bird movements
     self.best=[0, 2, 0] # Types of death are 2 for off screen, 1 for side of pipe, 0 for top or bottom or pipe
-    self.secbestframe=0
     self.count=2
+    self.compframe=0
 
   def resetvar(self, score, deathcircumstance):
     self.curr[0]=score
     self.curr[1]=deathcircumstance
     # Compare curr with best, see which is better
     if self.curr[0]>self.best[0]:
-      if self.best[2]>self.secbestframe:
-        self.secbestframe=self.best[2]
       self.best=self.curr[:]
+      self.compframe=self.count
     elif self.curr[0]==self.best[0]:
       if self.curr[1]<self.best[1]:
-        if self.best[2]>self.secbestframe:
-          self.secbestframe=self.best[2]
         self.best=self.curr[:]
+        self.compframe=self.count
     self.curr=self.best[:]
     self.count=2
 
   def play(self):
     if self.best == [0, 2, 0] or self.count>len(self.curr)-1:
+      print("Appending new")
       self.curr.append(randint(0,25)) # Randomize and append
     elif self.count>self.best[2]:
       if self.best[1]==2:
+        print("Creating new with death 2")
         self.curr[self.count]=(randint(0,25)) # Randomize and replace
       if self.best[1]==1:
-        aux_count=self.best[2]-(WIN_WIDTH/2) # Move only if bird is halfway between pipes or later
-        if self.count>aux_count:
+        aux_count=(self.compframe-self.best[2])/2 # Move only if bird is halfway between pipes or later
+        if self.count>aux_count+self.best[2]:
+          print("Creating new with death 1: auxcount=", aux_count, self.count)
           self.curr[self.count]=(randint(0,25))
       else:
-        aux_count=self.best[2]-(WIN_WIDTH/3) # Move only if bird is more than 2/3 of the way to next pipe
-        if self.count>aux_count:
+        aux_count=7*(self.compframe-self.best[2])/8 # Move only if bird is more than 7/8 of the way to next pipe
+        if self.count>aux_count+self.best[2]:
+          print("Creating new with death 0")
           self.curr[self.count]=(randint(0,25)) # Possible to change chance later
     self.count+=1
     return self.curr[self.count-1]

@@ -443,22 +443,18 @@ class ai:
 
   def play(self):
     if self.best == [0, 2, 0] or self.count>len(self.curr)-1:
-      print("Appending new")
       self.curr.append(randint(0,25)) # Randomize and append
     elif self.count>self.best[2]:
       if self.best[1]==2:
-        print("Creating new with death 2")
         self.curr[self.count]=(randint(0,25)) # Randomize and replace
       if self.best[1]==1:
         aux_count=(self.compframe-self.best[2])/2 # Move only if bird is halfway between pipes or later
-        if self.count>aux_count+self.best[2]:
-          print("Creating new with death 1: auxcount=", aux_count, self.count)
+        if self.count>aux_count:
           self.curr[self.count]=(randint(0,25))
       else:
-        aux_count=7*(self.compframe-self.best[2])/8 # Move only if bird is more than 7/8 of the way to next pipe
-        if self.count>aux_count+self.best[2]:
-          print("Creating new with death 0")
-          self.curr[self.count]=(randint(0,25)) # Possible to change chance later
+        aux_count=self.compframe-20 # Move only if bird is more than 5/6 of the way to next pipe
+        if self.count>aux_count:
+          self.curr[self.count]=(randint(0,30)) # Possible to change chance later
     self.count+=1
     return self.curr[self.count-1]
 

@@ -336,8 +336,8 @@ def main():
     firstcheck=1
     norestart=1
     while (end==0): # Make game restart with collision
+        norestart=1
         for i in autoinput:
-          norestart=1
           if i.done<norestart:
             norestart=i.done
         if norestart==1:

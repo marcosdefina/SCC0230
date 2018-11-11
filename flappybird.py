@@ -323,7 +323,7 @@ def main():
 
     # the bird stays in the same x position, so bird.x is a constant
     # Create birds and center them on screen
-    birdnum=20
+    birdnum=200
     birds=[]
     autoinput=[]
     for i in range(birdnum):
@@ -334,13 +334,13 @@ def main():
     PS=(5, 4, 8, 3, 8, 7, 3, 2, 6, 5) #preset pipe size
     end=0
     firstcheck=1
-    norestart=1
+    restart=1
     while (end==0): # Make game restart with collision
-        norestart=1
+        restart=1
         for i in autoinput:
-          if i.done<norestart:
-            norestart=i.done
-        if norestart==1:
+          if i.done<restart:
+            restart=i.done
+        if restart==1:
           score=0
           paused = 0
           for i in range(len(birds)):
@@ -350,7 +350,7 @@ def main():
             (images['bird-wingup'], images['bird-wingdown']), 0)
             if firstcheck==0:
               autoinput[i].resetvar(autoinput[i].score)
-            autoinput[i].score=0
+              autoinput[i].score=0
           if firstcheck:
             firstcheck=0
           pipes=deque() # Make pipes vanish
@@ -376,6 +376,8 @@ def main():
             for i in autoinput:
               if i.best[1]>best:
                 i.best=autoinput[bestindex].best
+          for i in autoinput:
+            i.resetvar(i.score)
 
         clock.tick(FPS)
         # Handle this 'manually'.  If we used pygame.time.set_timer(),

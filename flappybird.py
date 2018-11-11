@@ -323,7 +323,7 @@ def main():
 
     # the bird stays in the same x position, so bird.x is a constant
     # Create birds and center them on screen
-    birdnum=200
+    birdnum=250
     birds=[]
     autoinput=[]
     for i in range(birdnum):

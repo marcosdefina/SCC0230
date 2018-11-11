@@ -16,7 +16,7 @@ FPS = 60
 ANIMATION_SPEED = 0.18  # pixels per millisecond
 WIN_WIDTH = 284 * 2     # BG image size: 284x512 px; tiled twice
 WIN_HEIGHT = 512
-
+BIRD_X=50
 
 class Bird(pygame.sprite.Sprite):
     """Represents the bird controlled by the player.
@@ -49,7 +49,7 @@ class Bird(pygame.sprite.Sprite):
     CLIMB_SPEED = 0.3
     CLIMB_DURATION = 200
 
-    def __init__(self, x, y, msec_to_climb, images):
+    def __init__(self, x, y, msec_to_climb, images, done=1):
         """Initialise a new Bird instance.
 
         Arguments:
@@ -317,37 +317,67 @@ def main():
     pygame.display.set_caption('Pygame Flappy Bird')
 
     clock = pygame.time.Clock()
+    score=0
     score_font = pygame.font.SysFont(None, 32, bold=True)  # default font
     images = load_images()
 
     # the bird stays in the same x position, so bird.x is a constant
-    # center bird on screen
-    bird = Bird(50, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
-                (images['bird-wingup'], images['bird-wingdown']))
-
-    autoinput=ai()
+    # Create birds and center them on screen
+    birdnum=20
+    birds=[]
+    autoinput=[]
+    for i in range(birdnum):
+      birds.append(Bird(BIRD_X, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
+                (images['bird-wingup'], images['bird-wingdown'])))
+      autoinput.append(ai())
     pipes = deque()
     PS=(5, 4, 8, 3, 8, 7, 3, 2, 6, 5) #preset pipe size
     end=0
-    done=1
     firstcheck=1
+    norestart=1
     while (end==0): # Make game restart with collision
-        if done:
-          done = paused = 0
-          bird = Bird(50, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
-            (images['bird-wingup'], images['bird-wingdown']))
-          pipes=deque() # Make pipes vanish
-          # Reset pipesize index to make them the same every time
-          pscount=0
-          frame_clock = 0  # this counter is only incremented if the game isn't paused
-          if firstcheck==0:
-            autoinput.resetvar(score, deathtype)
-          else:
-            firstcheck=0
+        for i in autoinput:
+          norestart=1
+          if i.done<norestart:
+            norestart=i.done
+        if norestart==1:
           score=0
+          paused = 0
+          for i in range(len(birds)):
+            autoinput[i].done=0
+            autoinput[i].deathprocessed=0
+            birds[i] = Bird(50, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
+            (images['bird-wingup'], images['bird-wingdown']), 0)
+            if firstcheck==0:
+              autoinput[i].resetvar(autoinput[i].score)
+            autoinput[i].score=0
+          if firstcheck:
+            firstcheck=0
+          pipes=deque() # Make pipes vanish
+          pscount=0 # Reset pipesize index to make them the same every time
+          frame_clock = 0  # this counter is only incremented if the game isn't paused
+          best=0
+          bestindex=-1
+          for i in range(len(autoinput)):
+            if autoinput[i].best[0]>best:
+              bestindex=i
+              best=autoinput[i].best[0]
+          if best>0:
+            for i in autoinput:
+              if i.best[0]<best:
+                i.best=autoinput[bestindex].best
+          best=2
+          bestindex=-1
+          for i in range(len(autoinput)):
+            if autoinput[i].best[1]<best:
+              bestindex=i
+              best=autoinput[i].best[1]
+          if best<2:
+            for i in autoinput:
+              if i.best[1]>best:
+                i.best=autoinput[bestindex].best
 
         clock.tick(FPS)
-
         # Handle this 'manually'.  If we used pygame.time.set_timer(),
         # pipe addition would be messed up when paused.
         if not (paused or frame_clock % msec_to_frames(PipePair.ADD_INTERVAL)):
@@ -367,23 +397,26 @@ def main():
                 paused = not paused
             elif e.type == MOUSEBUTTONUP or (e.type == KEYUP and
                     e.key in (K_UP, K_RETURN, K_SPACE)):
-                bird.msec_to_climb = Bird.CLIMB_DURATION
+                #bird.msec_to_climb = Bird.CLIMB_DURATION
+                pass
 
         if paused:
             continue  # don't draw anything
 
         # check for collisions
-        pipe_collision = any(p.collides_with(bird) for p in pipes)
-        if pipe_collision or 0 >= bird.y or bird.y >= WIN_HEIGHT - Bird.HEIGHT:
-            done = True
+        for i in range(len(birds)):
+          pipe_collision = any(p.collides_with(birds[i]) for p in pipes)
+          if autoinput[i].deathprocessed==0 and (pipe_collision or 0 >= birds[i].y or birds[i].y >= WIN_HEIGHT - Bird.HEIGHT):
+            autoinput[i].deathprocessed=1
+            birds[i].x=-100
+            autoinput[i].done = True
             if pipe_collision:
-              if bird.rect[1]>(pipes[0].top_pieces-1)*pipes[0].PIECE_HEIGHT and bird.rect[1]<WIN_HEIGHT-(pipes[0].bottom_pieces)*pipes[0].PIECE_HEIGHT: # If collision is with pipe head
-                deathtype=0
+              if birds[i].rect[1]>(pipes[0].top_pieces-1)*pipes[0].PIECE_HEIGHT and birds[i].rect[1]<WIN_HEIGHT-(pipes[0].bottom_pieces)*pipes[0].PIECE_HEIGHT: # If collision is with pipe head
+                autoinput[i].deathtype=0
               else:
-                deathtype=1
+                autoinput[i].deathtype=1
             else:
-              deathtype=2
-
+              autoinput[i].deathtype=2
         for x in (0, WIN_WIDTH / 2):
             display_surface.blit(images['background'], (x, 0))
 
@@ -394,16 +427,19 @@ def main():
             p.update()
             display_surface.blit(p.image, p.rect)
 
-        bird.update()
-        display_surface.blit(bird.image, bird.rect)
+        for i in birds:
+          i.update()
+          display_surface.blit(i.image, i.rect)
 
         # update and display score
         for p in pipes:
-            if p.x + PipePair.WIDTH < bird.x and not p.score_counted:
-                score += 1
-                autoinput.scorecount()
+            if p.x + PipePair.WIDTH < BIRD_X and not p.score_counted:
+                for i in range(len(birds)):
+                  if autoinput[i].done==0:
+                    autoinput[i].score += 1
+                    autoinput[i].scorecount()
+                score+=1
                 p.score_counted = True
-
         score_surface = score_font.render(str(score), True, (255, 255, 255))
         score_x = WIN_WIDTH/2 - score_surface.get_width()/2
         display_surface.blit(score_surface, (score_x, PipePair.PIECE_HEIGHT))
@@ -412,11 +448,16 @@ def main():
         frame_clock += 1
 
         # Machine learning call
-        fly=autoinput.play()
-        if fly==1:
-          bird.msec_to_climb=Bird.CLIMB_DURATION
+        for i in range(len(birds)):
+          if autoinput[i].done==0:
+            fly=autoinput[i].play()
+            if fly==1:
+              birds[i].msec_to_climb=Bird.CLIMB_DURATION
 
-    print('Game over! Highest score: %i' % autoinput.best[0])
+    finalscore=[]
+    for i in autoinput:
+      finalscore.append(i.best[0])
+    print('Game over! Highest score: ', max(finalscore))
     pygame.quit()
 
 class ai:
@@ -426,10 +467,14 @@ class ai:
     self.best=[0, 2, 0] # Types of death are 2 for off screen, 1 for side of pipe, 0 for top or bottom or pipe
     self.count=2
     self.compframe=0
+    self.deathtype = 2
+    self.deathprocessed = 0
+    self.done = 1
+    self.score = 0
 
-  def resetvar(self, score, deathcircumstance):
+  def resetvar(self, score):
     self.curr[0]=score
-    self.curr[1]=deathcircumstance
+    self.curr[1]=self.deathtype
     # Compare curr with best, see which is better
     if self.curr[0]>self.best[0]:
       self.best=self.curr[:]

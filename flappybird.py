@@ -2,7 +2,7 @@
 
 """Flappy Bird, implemented using Pygame."""
 
-import time #aaa
+import sys
 import math
 import os
 from random import randint
@@ -281,7 +281,9 @@ def load_images():
             # images for animating the flapping bird -- animated GIFs are
             # not supported in pygame
             'bird-wingup': load_image('bird_wing_up.png'),
-            'bird-wingdown': load_image('bird_wing_down.png')}
+            'bird-wingdown': load_image('bird_wing_down.png'),
+            'bird2-wingup':load_image('bird2_wing_up.png') ,
+            'bird2-wingdown':load_image('bird2_wing_down.png')}
 
 
 def frames_to_msec(frames, fps=FPS):
@@ -320,12 +322,22 @@ def main():
     score=0
     score_font = pygame.font.SysFont(None, 32, bold=True)  # default font
     images = load_images()
-
+    
     # the bird stays in the same x position, so bird.x is a constant
     # Create birds and center them on screen
-    birdnum=250
+    if len(sys.argv)>1:
+      birdnum=int(sys.argv[1])
+    else:
+      birdnum=250
+    if len(sys.argv)>2:
+      player=int(sys.argv[2])
+    else:
+      player=0
     birds=[]
     autoinput=[]
+    if player:
+      bird=Bird(BIRD_X, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
+                (images['bird2-wingup'], images['bird2-wingdown']))
     for i in range(birdnum):
       birds.append(Bird(BIRD_X, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
                 (images['bird-wingup'], images['bird-wingdown'])))
@@ -335,12 +347,18 @@ def main():
     end=0
     firstcheck=1
     restart=1
-    while (end==0): # Make game restart with collision
+    while end==0: # Make game restart with collision
         restart=1
         for i in autoinput:
           if i.done<restart:
             restart=i.done
-        if restart==1:
+
+        if restart==1 and (player==0 or player==-1 or firstcheck):
+          if player:
+            bird=Bird(50, int(WIN_HEIGHT/2 - Bird.HEIGHT/2), 2,
+              (images['bird2-wingup'], images['bird2-wingdown']), 0)
+            bird.score=0
+            player=1
           score=0
           paused = 0
           for i in range(len(birds)):
@@ -399,8 +417,8 @@ def main():
                 paused = not paused
             elif e.type == MOUSEBUTTONUP or (e.type == KEYUP and
                     e.key in (K_UP, K_RETURN, K_SPACE)):
-                #bird.msec_to_climb = Bird.CLIMB_DURATION
-                pass
+                      if player:
+                        bird.msec_to_climb = Bird.CLIMB_DURATION
 
         if paused:
             continue  # don't draw anything
@@ -422,6 +440,12 @@ def main():
         for x in (0, WIN_WIDTH / 2):
             display_surface.blit(images['background'], (x, 0))
 
+        if player:
+          pipe_collision = any(p.collides_with(bird) for p in pipes)
+          if pipe_collision or 0 >= bird.y or bird.y >= WIN_HEIGHT - Bird.HEIGHT:
+            bird.x=-100
+            player=-1
+
         while pipes and not pipes[0].visible:
             pipes.popleft()
 
@@ -432,6 +456,9 @@ def main():
         for i in birds:
           i.update()
           display_surface.blit(i.image, i.rect)
+        if player:
+          bird.update()
+          display_surface.blit(bird.image, bird.rect)
 
         # update and display score
         for p in pipes:
